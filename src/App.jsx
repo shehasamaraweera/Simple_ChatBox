@@ -18,33 +18,47 @@ function App() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
 
-  function sendMessage() {
-    if (input.trim() === "") return;
+  async function sendMessage() {
+    const messageText = input.trim();
+    if (messageText === "") return;
 
     const userMessage = {
       sender: "You",
-      text: input,
+      text: messageText,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-
     setTyping(true);
 
-    setTimeout(() => {
-      const aiReply = {
-        sender: "AI",
-        text: "This is a demo reply. Later you can connect me to OpenAI or Gemini.",
-      };
+    try {
+      const { getAIResponse } = await import("./api");
+      const reply = await getAIResponse(messageText);
 
-      setMessages((prev) => [...prev, aiReply]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "AI",
+          text: reply,
+        },
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "AI",
+          text: "Sorry, I couldn't respond right now.",
+        },
+      ]);
+    } finally {
       setTyping(false);
-    }, 1500);
+    }
   }
 
   function handleKeyPress(e) {
     if (e.key === "Enter") {
-      sendMessage();
+      e.preventDefault();
+      void sendMessage();
     }
   }
 
@@ -82,7 +96,7 @@ function App() {
           placeholder="Type your message..."
         />
 
-        <button onClick={sendMessage}>Send</button>
+        <button onClick={() => void sendMessage()}>Send</button>
       </div>
     </div>
   );
